@@ -91,14 +91,15 @@ int main(int argc, char **argv) {
 	// second pass: output data
 	rewind(in_obj);
 
-	size_t count = 0;
+	size_t vertex_count_cur = 0;
+	size_t face_count_cur = 0;
 	while ((read = getline(&line, &len, in_obj)) != -1) {
 
 		if (read == 0) continue;
 
 		if (line[0] == 'v' && line[1] == ' ') {
 
-			if (count == 0) fprintf(out_h, "\t.v = {\n");
+			if (vertex_count_cur == 0) fprintf(out_h, "\t.v = {\n");
 
 			char* buf = strdup(line);
 			if (!buf) {
@@ -117,20 +118,19 @@ int main(int argc, char **argv) {
 				continue;
 			}
 
-			if (count < vertex_count - 1) {
+			if (vertex_count_cur < vertex_count - 1) {
 				fprintf(out_h, "\t\t{{ %s, %s, %s }},\n", tok1, tok2, tok3);
-				count += 1;
+				vertex_count_cur += 1;
 			} else {
 				fprintf(out_h, "\t\t{{ %s, %s, %s }}\n", tok1, tok2, tok3);
 				fprintf(out_h, "\t},\n");
-				count = 0;
 			}
 
 			free(buf);
 
 		} else if (line[0] == 'f' && line[1] == ' ') {
 
-			if (count == 0) fprintf(out_h, "\t.f = {\n");
+			if (face_count_cur == 0) fprintf(out_h, "\t.f = {\n");
 
 			char* buf = strdup(line);
 			if (!buf) {
@@ -149,13 +149,12 @@ int main(int argc, char **argv) {
 				tok3 = strtok(tok3, "/");
 			}
 
-			if (count < face_count - 1) {
+			if (face_count_cur < face_count - 1) {
 				fprintf(out_h, "\t\t{{ %s, %s, %s }},\n", tok1, tok2, tok3);
-				count += 1;
+				face_count_cur += 1;
 			} else {
 				fprintf(out_h, "\t\t{{ %s, %s, %s }}\n", tok1, tok2, tok3);
 				fprintf(out_h, "\t}\n");
-				count = 0;
 			}
 
 			free(buf);
