@@ -1,3 +1,4 @@
+#define FONT_5X5_IMPLEMENTATION
 #include "../inc/text.h"
 
 #include <stdio.h>
