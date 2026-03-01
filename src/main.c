@@ -13,6 +13,8 @@
 #include "../assets/asset_airboat.h"
 #include "../assets/asset_humanoid_tri.h"
 #include "../assets/asset_ballermann.h"
+#include "../assets/asset_player.h"
+#include "../assets/asset_kochmuetze.h"
 
 #define XMIN 40
 #define YMIN 40
@@ -27,18 +29,20 @@ static         size_t triangle_count_global = 0;
 static float* buffer_depth = NULL;
 
 typedef struct {
+	V3f position;
+	V3f forward;
+} Player;
+Player player = {
+	.position = { .x = 0.0f, .y = 0.0f, .z = 0.0f },
+	.forward  = { .x = 0.0f, .y = 0.0f, .z = 1.0f }
+};
+
+typedef struct {
 	uint32_t flags;
 	bool grid_on;
 	bool wireframe;
 	bool bfc;
 } State;
-
-typedef struct {
-	char* type;
-	void* asset;
-} MapObject;
-
-
 State state = {
 	.flags = 0,
 	.grid_on = true,
@@ -46,12 +50,25 @@ State state = {
 	.bfc = false
 };
 
+typedef struct {
+	char* type;
+	void* asset;
+} MapObject;
+
 void pixel_set(uint32_t x, uint32_t y, uint32_t* buffer, uint32_t color) {
 
 	if (x >= SCREEN_WIDTH || y >= SCREEN_HEIGHT) return;
 	buffer[x + y * SCREEN_WIDTH] = color;
 }
 
+void player_info() {
+	float x = player.position.x;
+	float y = player.position.y;
+	float z = player.position.z;
+
+	printf("Player Info: \n");
+	printf("r(x, y, z) = (%6.2f, %6.2f, %6.2f)\n", x, y, z);
+}
 
 static inline V3f world_to_view(V3f v_in, Camera c) {
 
@@ -220,19 +237,20 @@ void background_render(uint32_t* buffer) {
 		buffer[x + y*SCREEN_WIDTH] = 0;
 	}}
 }
-static inline Color shade_color(Color c, float intensity)
-{
-    if (intensity < 0.0f) intensity = 0.0f;
-    if (intensity > 1.0f) intensity = 1.0f;
 
-    uint32_t i = (uint32_t)(intensity * 255.0f);
+static inline Color shade_color(Color c, float intensity) {
 
-    uint32_t r = ((c >> 24) & 0xFF) * i >> 8;
-    uint32_t g = ((c >> 16) & 0xFF) * i >> 8;
-    uint32_t b = ((c >>  8) & 0xFF) * i >> 8;
-    uint32_t a =  (c        & 0xFF);
+	if (intensity < 0.0f) intensity = 0.0f;
+	if (intensity > 1.0f) intensity = 1.0f;
 
-    return (r << 24) | (g << 16) | (b << 8) | a;
+	uint32_t i = (uint32_t) (intensity * 255.0f);
+
+	uint32_t r = ( (c >> 24) & 0xFF) * i >> 8;
+	uint32_t g = ( (c >> 16) & 0xFF) * i >> 8;
+	uint32_t b = ( (c >>  8) & 0xFF) * i >> 8;
+	uint32_t a =   (c        & 0xFF)         ;
+
+	return (r << 24) | (g << 16) | (b << 8) | a;
 }
 
 void triangle_draw(Triangle t, uint32_t* buffer, Camera camera, Color color) {
@@ -304,7 +322,7 @@ void triangle_draw(Triangle t, uint32_t* buffer, Camera camera, Color color) {
 	n = norm_3f(n);
 	V3f light_global_pos_w = { .x = 5.0f, .y = 5.0f, .z = 5.0f };
 	V3f light_global_pos_v = world_to_view(light_global_pos_w, camera);
-	V3f dir = norm_3f(sub_3f(light_global_pos_v, t.v1));
+	V3f dir = norm_3f(sub_3f(t.v1, light_global_pos_v));
 	float intensity = dot_3f(dir, n);
 	if (intensity < 0.0f) intensity = 0.0f;
 	color = shade_color(color, intensity);
@@ -359,6 +377,16 @@ double time_measure_end_ms(struct timespec* t1, const struct timespec* t0) {
 	return sec * 1000.0 + nsec / 1e6;
 }
 
+Triangle triangle_offset(Triangle t, V3f offset) {
+	Triangle res = {0};
+
+	res.v1 = add_3f(t.v1, offset);
+	res.v2 = add_3f(t.v2, offset);
+	res.v3 = add_3f(t.v3, offset);
+
+	return res;
+}
+
 void event_loop(SDLContext* ctx, uint32_t* buffer, Camera camera) {
 
 	// for fps calculation
@@ -372,15 +400,16 @@ void event_loop(SDLContext* ctx, uint32_t* buffer, Camera camera) {
 		.v2 = {{ +1.0f, +0.0f, +0.0f }},
 		.v3 = {{ +0.5f, +1.0f, +0.0f }}
 	};
-
+	(void) tri1;
 	Triangle tri2 = {
 		.v1 = {{ +0.0f, +0.0f, +1.0f }},
 		.v2 = {{ +1.0f, +0.0f, +1.0f }},
 		.v3 = {{ +0.5f, +1.0f, +1.0f }}
 	};
+	(void) tri2;
 
 	size_t samples_cur      = 0;
-	double t_ms_avg          = 0;
+	double t_ms_avg         = 0;
 	double t_ms_avg_rolling = 0;
 	while (running) {
 
@@ -410,38 +439,53 @@ void event_loop(SDLContext* ctx, uint32_t* buffer, Camera camera) {
 
 		const Uint8* keys = SDL_GetKeyboardState(NULL);
 		float mv_fac = 0.05f;
+		float mv_fac_player = 0.05f;
 
 		if (keys[SDL_SCANCODE_E]) {
-			camera.position = add_3f(camera.position,
-			scal_3f(mv_fac, camera.forward));
+			camera.position = add_3f(camera.position, scal_3f(mv_fac, camera.forward));
+		}
+		if (keys[SDL_SCANCODE_UP]) {
+			player.position = add_3f(player.position, scal_3f(mv_fac_player, player.forward));
 		}
 
 		if (keys[SDL_SCANCODE_D]) {
-			V3f dir = norm_3f((V3f) {{ camera.forward.x, 0.0f, camera.forward.z }} );
-			camera.position = sub_3f(camera.position,
-			scal_3f(mv_fac, dir));
+			V3f dir = { .x = camera.forward.x, .y = 0.0f, .z = camera.forward.z };
+			dir = norm_3f(dir);
+			camera.position = sub_3f(camera.position, scal_3f(mv_fac, dir));
+			printf("test\n");
+		}
+		if (keys[SDL_SCANCODE_DOWN]) {
+			V3f dir = { .x = player.forward.x, .y = 0.0f, .z = player.forward.z };
+			dir = norm_3f(dir);
+			player.position = sub_3f(player.position, scal_3f(mv_fac_player, dir));
 		}
 
 		if (keys[SDL_SCANCODE_S]) {
 			V3f dir = norm_3f(cross_3f(camera.up, camera.forward));
-			camera.position = add_3f(camera.position,
-			scal_3f(mv_fac, dir));
+			camera.position = add_3f(camera.position, scal_3f(mv_fac, dir));
+		}
+		if (keys[SDL_SCANCODE_LEFT]) {
+			V3f up  = { .x = 0.0f, .y = 1.0f, .z = 0.0f };
+			V3f dir = norm_3f(cross_3f(up, player.forward));
+			player.position = add_3f(player.position, scal_3f(mv_fac_player, dir));
 		}
 
 		if (keys[SDL_SCANCODE_F]) {
 			V3f dir = norm_3f(cross_3f(camera.forward, camera.up));
-			camera.position = add_3f(camera.position,
-			scal_3f(mv_fac, dir));
+			camera.position = add_3f(camera.position, scal_3f(mv_fac, dir));
+		}
+		if (keys[SDL_SCANCODE_RIGHT]) {
+			V3f up  = { .x = 0.0f, .y = 1.0f, .z = 0.0f };
+			V3f dir = norm_3f(cross_3f(player.forward, up));
+			player.position = add_3f(player.position, scal_3f(mv_fac_player, dir));
 		}
 
 		if (keys[SDL_SCANCODE_SPACE]) {
-			camera.position = add_3f(camera.position,
-			scal_3f(mv_fac, (V3f) {{ 0.0f, 1.0f, 0.0f }} ));
+			camera.position = add_3f(camera.position, scal_3f(mv_fac, (V3f) {{ 0.0f, 1.0f, 0.0f }} ));
 		}
 
 		if (keys[SDL_SCANCODE_LSHIFT]) {
-			camera.position = add_3f(camera.position,
-			scal_3f(mv_fac, (V3f) {{ 0.0f, -1.0f, 0.0f }} ));
+			camera.position = add_3f(camera.position, scal_3f(mv_fac, (V3f) {{ 0.0f, -1.0f, 0.0f }} ));
 		}
 
 		if (state.grid_on) grid_draw(buffer, camera);
@@ -456,19 +500,40 @@ void event_loop(SDLContext* ctx, uint32_t* buffer, Camera camera) {
 			triangle_draw(t, buffer, camera, GREEN);
 		}
 */
-		static float angle = 0.0f;
-		angle += 0.01;
-		M3f mat_rot1 = rot_xz_3f(+angle);
-		M3f mat_rot2 = rot_xz_3f(-angle);
+		//static float angle = 0.0f;
+		//angle += 0.01;
+		//M3f mat_rot1 = rot_xz_3f(+angle);
+		//M3f mat_rot2 = rot_xz_3f(-angle);
 
-		for (int i = asset_ballermann.f_count - 1; i >= 0; i--) {
+		for (int i = asset_kochmuetze.f_count - 1; i >= 0; i--) {
 			Triangle t = {
-				.v1 = mul_m3f_v3f(mat_rot1, asset_ballermann.v[asset_ballermann.f[i].x-1]),
-				.v2 = mul_m3f_v3f(mat_rot1, asset_ballermann.v[asset_ballermann.f[i].y-1]),
-				.v3 = mul_m3f_v3f(mat_rot1, asset_ballermann.v[asset_ballermann.f[i].z-1])
+				.v1 = asset_kochmuetze.v[asset_kochmuetze.f[i].x-1],
+				.v2 = asset_kochmuetze.v[asset_kochmuetze.f[i].y-1],
+				.v3 = asset_kochmuetze.v[asset_kochmuetze.f[i].z-1]
+			};
+			t = triangle_offset(t, player.position);
+			triangle_draw(t, buffer, camera, EMERALD);
+		}
+
+		for (int i = asset_player.f_count - 1; i >= 0; i--) {
+			Triangle t = {
+				.v1 = asset_player.v[asset_player.f[i].x-1],
+				.v2 = asset_player.v[asset_player.f[i].y-1],
+				.v3 = asset_player.v[asset_player.f[i].z-1]
+			};
+			t = triangle_offset(t, player.position);
+			triangle_draw(t, buffer, camera, EMERALD);
+		}
+		/*
+		for (int i = asset_kochmuetze.f_count - 1; i >= 0; i--) {
+			Triangle t = {
+				.v1 = mul_m3f_v3f(mat_rot1, asset_kochmuetze.v[asset_kochmuetze.f[i].x-1]),
+				.v2 = mul_m3f_v3f(mat_rot1, asset_kochmuetze.v[asset_kochmuetze.f[i].y-1]),
+				.v3 = mul_m3f_v3f(mat_rot1, asset_kochmuetze.v[asset_kochmuetze.f[i].z-1])
 			};
 			triangle_draw(t, buffer, camera, EMERALD);
 		}
+		*/
 		/*
 		for (int i = asset_teapot.f_count - 1; i >= 0; i--) {
 			Triangle t = {
@@ -538,6 +603,7 @@ void event_loop(SDLContext* ctx, uint32_t* buffer, Camera camera) {
 
 		lines_count_global     = 0;
 		triangle_count_global = 0;
+		player_info();
 	}
 }
 
