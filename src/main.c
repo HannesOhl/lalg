@@ -8,13 +8,13 @@
 #include "../inc/text.h"
 #include "../inc/color.h"
 #include "../inc/backend_sdl.h"
+#include "../inc/textures.h"
 
-#include "../assets/inc/asset_cube.h"
 #include "../assets/inc/asset_teapot.h"
-#include "../assets/inc/asset_airboat.h"
-#include "../assets/inc/asset_humanoid_tri.h"
-#include "../assets/inc/asset_ballermann.h"
 #include "../assets/inc/asset_player.h"
+#include "../assets/inc/asset_zylinder.h"
+#include "../assets/inc/asset_zaubererhut.h"
+#include "../assets/inc/asset_lok.h"
 #include "../assets/inc/asset_kochmuetze.h"
 
 #define XMIN 40
@@ -22,62 +22,75 @@
 #define XMAX (SCREEN_WIDTH  - 40)
 #define YMAX (SCREEN_HEIGHT - 40)
 
+// this layout must match the ones in the ./assets/inc/asset_* files
 typedef struct {
-	uint32_t width;
-	uint32_t height;
-	size_t size;
-	const uint8_t* pixels;
-} Texture;
+	size_t v_count;
+	size_t vt_count;
+	size_t vn_count;
+	size_t f_count;
+	const V3f* v;
+	const V2f* vt;
+	const V3f* vn;
+	const Face* f;
+	V3f min;
+	V3f max;
+} Mesh;
 
-static const uint8_t player_texture_blob[] = {
-	#embed "../assets/bin/texture_player.bin"
-};
+typedef struct {
+	const Mesh* mesh;
+	const Texture* tex;
+} Model;
 
-#define MAKE_TEXTURE(name) 								\
-	static const Texture name = { 							\
-        	.width  = (uint32_t)name##_blob[sizeof(name##_blob) - 8] << 0     | 	\
-                  	 ((uint32_t)name##_blob[sizeof(name##_blob) - 7] << 8)    | 	\
-			 ((uint32_t)name##_blob[sizeof(name##_blob) - 6] << 16)   | 	\
-			 ((uint32_t)name##_blob[sizeof(name##_blob) - 5] << 24),  	\
-        	.height = (uint32_t)name##_blob[sizeof(name##_blob) - 4]          | 	\
-			 ((uint32_t)name##_blob[sizeof(name##_blob) - 3] << 8)    | 	\
-			 ((uint32_t)name##_blob[sizeof(name##_blob) - 2] << 16)   | 	\
-			 ((uint32_t)name##_blob[sizeof(name##_blob) - 1] << 24),  	\
-        		.size   = sizeof(name##_blob) - 8,                               \
-		        .pixels = name##_blob                                            \
+Model model_assemble(const void* asset, const Texture* asset_texture) {
+
+	const uint8_t* a = (uint8_t*) asset;
+
+	Mesh* mesh = calloc((size_t) 1, sizeof *mesh);
+
+	size_t offset = 0;
+
+	memcpy(&mesh->v_count, a + offset, sizeof mesh->v_count);
+	offset += sizeof mesh->v_count;
+
+	memcpy(&mesh->vt_count, a + offset, sizeof mesh->vt_count);
+	offset += sizeof mesh->vt_count;
+
+	memcpy(&mesh->vn_count, a + offset, sizeof mesh->vn_count);
+	offset += sizeof mesh->vn_count;
+
+	memcpy(&mesh->f_count, a + offset, sizeof mesh->f_count);
+	offset += sizeof mesh->f_count;
+
+	mesh->v = (const V3f*) (a + offset);
+	offset += sizeof *mesh->v * mesh->v_count;
+
+	mesh->vt = (const V2f*) (a + offset);
+	offset += sizeof *mesh->vt * mesh->vt_count;
+
+	mesh->vn = (const V3f*) (a + offset);
+	offset += sizeof *mesh->vn * mesh->vn_count;
+
+	mesh->f = (const Face*) (a + offset);
+	offset += sizeof *mesh->f * mesh->f_count;
+
+	memcpy(&mesh->min, a + offset, sizeof mesh->min);
+	offset += sizeof mesh->min;
+
+	memcpy(&mesh->max, a + offset, sizeof mesh->max);
+
+	Model res = {
+		.mesh = mesh,
+		.tex = asset_texture
 	};
 
-MAKE_TEXTURE(player_texture)
-
-
-/*
-
-#define EMBED_TEXTURE(name, file) 							\
-	static const uint8_t name##_blob[] = { 						\
-		#embed file 								\
-	}; 										\
-	static const Texture name = { 							\
-        	.width  = (uint32_t)name##_blob[sizeof(name##_blob) - 8] << 0     | 	\
-                  	 ((uint32_t)name##_blob[sizeof(name##_blob) - 7] << 8)    | 	\
-			 ((uint32_t)name##_blob[sizeof(name##_blob) - 6] << 16)   | 	\
-			 ((uint32_t)name##_blob[sizeof(name##_blob) - 5] << 24),  	\
-        	.height = (uint32_t)name##_blob[sizeof(name##_blob) - 4]          | 	\
-			 ((uint32_t)name##_blob[sizeof(name##_blob) - 3] << 8)    | 	\
-			 ((uint32_t)name##_blob[sizeof(name##_blob) - 2] << 16)   | 	\
-			 ((uint32_t)name##_blob[sizeof(name##_blob) - 1] << 24),  	\
-        .size   = sizeof(name##_blob) - 8,                                 		\
-        .pixels = name##_blob                                              		\
-    }
-
-
-EMBED_TEXTURE(tex_player, "./assets/bin/texture_player.bin");
-*/
+	return res;
+}
 
 static const float EPS = 1e-8;
 
-static	size_t lines_count_global	    = 0;
-static	size_t triangle_count_global	    = 0;
-static	size_t models_rejected_count_global = 0;
+static size_t lines_count_global	   = 0;
+static size_t triangle_count_global	   = 0;
+static size_t models_rejected_count_global = 0;
 
 static float* buffer_depth = NULL;
 
@@ -96,13 +109,15 @@ typedef struct {
 	bool wireframe;
 	bool bfc;
 	bool vfc;
+	bool hat;
 } State;
 State state = {
 	.flags = 0,
 	.grid_on = true,
 	.wireframe = false,
 	.bfc = false,
-	.vfc = false
+	.vfc = false,
+	.hat = false
 };
 
 typedef struct {
@@ -293,7 +308,7 @@ void background_render(uint32_t* buffer) {
 
 static inline Color shade_color(Color c, float intensity) {
 
-	if (intensity < 0.0f) intensity = 0.0f;
+	if (intensity < 0.1f) intensity = 0.1f;
 	if (intensity > 1.0f) intensity = 1.0f;
 
 	uint32_t i = (uint32_t) (intensity * 255.0f);
@@ -306,7 +321,7 @@ static inline Color shade_color(Color c, float intensity) {
 	return (r << 24) | (g << 16) | (b << 8) | a;
 }
 
-void triangle_draw(Triangle t, uint32_t* buffer, Camera camera, Color color) {
+void triangle_draw(Triangle t, V2f uv1, V2f uv2, V2f uv3, uint32_t* buffer, Camera camera, Color color, const Texture* tex) {
 
 	if (state.wireframe) {
 		line_draw(t.v1, t.v2, buffer, color, camera);
@@ -324,7 +339,7 @@ void triangle_draw(Triangle t, uint32_t* buffer, Camera camera, Color color) {
 	if (t.v1.z <= znear && t.v2.z <= znear && t.v3.z <= znear) return;
 
 	// also for lighting
-	V3f n = cross_3f( sub_3f(t.v2, t.v1), sub_3f(t.v3, t.v1) );
+	V3f n = norm_3f(cross_3f( sub_3f(t.v2, t.v1), sub_3f(t.v3, t.v1) ));
 	if (state.bfc) {
 		// cull backfaces
 		if ( dot_3f(t.v1, n) <= 0 ) return;
@@ -334,7 +349,7 @@ void triangle_draw(Triangle t, uint32_t* buffer, Camera camera, Color color) {
 	V2s v2 = get_image_crd(t.v2, camera);
 	V2s v3 = get_image_crd(t.v3, camera);
 
-	// skip trangles that are completely out of the image
+	// skip triangles that are completely out of the image
 	if ( v1.x < (int32_t) XMIN && v2.x < (int32_t) XMIN && v3.x < (int32_t) XMIN) return;
 	if ( v1.y < (int32_t) YMIN && v2.y < (int32_t) YMIN && v3.y < (int32_t) YMIN) return;
 	if ( v1.x > (int32_t) XMAX && v2.x > (int32_t) XMAX && v3.x > (int32_t) XMAX) return;
@@ -372,12 +387,10 @@ void triangle_draw(Triangle t, uint32_t* buffer, Camera camera, Color color) {
 	if (fabsf(denom) < EPS) return;
 
 	// get shaded color for triangle based on global light pos
-	n = norm_3f(n);
 	V3f light_global_pos_w = { .x = 5.0f, .y = 5.0f, .z = 5.0f };
 	V3f light_global_pos_v = world_to_view(light_global_pos_w, camera);
 	V3f dir = norm_3f(sub_3f(t.v1, light_global_pos_v));
 	float intensity = dot_3f(dir, n);
-	if (intensity < 0.0f) intensity = 0.0f;
 	color = shade_color(color, intensity);
 
 	float denom_inv = 1.0f / denom;
@@ -403,13 +416,53 @@ void triangle_draw(Triangle t, uint32_t* buffer, Camera camera, Color color) {
 		if (fabsf(z_inv) < EPS) continue;
 		float z = 1.0f / z_inv;
 
-		size_t idx = (size_t) x + (size_t) y * (size_t) SCREEN_WIDTH;
+		float u_over_z = a * (uv1.x * iz1) + b * (uv2.x * iz2) + c * (uv3.x * iz3);
+		float v_over_z = a * (uv1.y * iz1) + b * (uv2.y * iz2) + c * (uv3.y * iz3);
+
+		float u = u_over_z / z_inv;
+		float v = v_over_z / z_inv;
+
+		uint32_t tw = tex->width;
+		uint32_t th = tex->height;
+
+		uint32_t tx = (uint32_t) (u * (tw - 1));
+		uint32_t ty = (uint32_t) ((1.0f - v ) * (th - 1));
+
+		if (tx >= tw) tx = tw - 1;
+		if (ty >= th) ty = th - 1;
+
+		size_t idx = (tx + ty*tw) * 4;
+		uint32_t current_pixel =
+			    ((uint32_t)tex->pixels[idx + 0] << 16) |
+			    ((uint32_t)tex->pixels[idx + 1] << 8)  |
+			    ((uint32_t)tex->pixels[idx + 2] << 0)  |
+			    ((uint32_t)tex->pixels[idx + 3] << 24);
+		Color texel = current_pixel;
+
+		idx = (size_t) x + (size_t) y * (size_t) SCREEN_WIDTH;
 		if (z < buffer_depth[idx]) {
 			buffer_depth[idx] = z;
-			pixel_set(x, y, buffer, color);
+			//pixel_set(x, y, buffer, color);
+			pixel_set(x, y, buffer, texel);
 		}
 	}}
     	triangle_count_global += 1;
+}
+
+void model_render(Model model, uint32_t* buffer, Camera camera) {
+
+	for (size_t i = 0; i < model.mesh->f_count; i++) {
+		Triangle t = {
+			.v1 = model.mesh->v[model.mesh->f[i].c1.v-1],
+			.v2 = model.mesh->v[model.mesh->f[i].c2.v-1],
+			.v3 = model.mesh->v[model.mesh->f[i].c3.v-1]
+		};
+		V2f vt1 = model.mesh->vt[model.mesh->f[i].c1.vt-1];
+		V2f vt2 = model.mesh->vt[model.mesh->f[i].c2.vt-1];
+		V2f vt3 = model.mesh->vt[model.mesh->f[i].c3.vt-1];
+
+		triangle_draw(t, vt1, vt2, vt3, buffer, camera, GREEN, model.tex);
+	}
 }
 
 void time_measure_start(struct timespec* t0) {
@@ -458,7 +511,7 @@ void buffer_depth_max() {
 	}
 }
 
-void event_loop(SDLContext* ctx, uint32_t* buffer, Camera camera) {
+void event_loop(SDLContext* ctx, uint32_t* buffer, Camera camera, Model* models) {
 
 	// for fps calculation
 	struct timespec t0 = {0};
@@ -518,6 +571,7 @@ void event_loop(SDLContext* ctx, uint32_t* buffer, Camera camera) {
 				if (ctx->event.key.keysym.sym == SDLK_w) state.wireframe = !state.wireframe;
 				if (ctx->event.key.keysym.sym == SDLK_b) state.bfc = !state.bfc;
 				if (ctx->event.key.keysym.sym == SDLK_f) state.vfc = !state.vfc;
+				if (ctx->event.key.keysym.sym == SDLK_h) state.hat = !state.hat;
 				break;
 
 			case SDL_MOUSEMOTION:
@@ -583,101 +637,25 @@ void event_loop(SDLContext* ctx, uint32_t* buffer, Camera camera) {
 		}
 
 		if (state.grid_on) grid_draw(buffer, camera);
-/*
-		for (size_t i = 0; i < asset_cube.f_count; i++) {
-			Triangle t = {
-				.v1 = asset_cube.v[asset_cube.f[i].x-1],
-				.v2 = asset_cube.v[asset_cube.f[i].y-1],
-				.v3 = asset_cube.v[asset_cube.f[i].z-1]
-			};
 
-			triangle_draw(t, buffer, camera, GREEN);
-		}
-*/
 		static float angle = 0.0f;
 		angle += 0.01;
-		M3f mat_rot1 = rot_xz_3f(+angle);
-		//M3f mat_rot2 = rot_xz_3f(-angle);
-		/*
-		for (int i = asset_kochmuetze.f_count - 1; i >= 0; i--) {
-			Triangle t = {
-				.v1 = asset_kochmuetze.v[asset_kochmuetze.f[i].x-1],
-				.v2 = asset_kochmuetze.v[asset_kochmuetze.f[i].y-1],
-				.v3 = asset_kochmuetze.v[asset_kochmuetze.f[i].z-1]
-			};
-			t = triangle_offset(t, player.position);
-			triangle_draw(t, buffer, camera, EMERALD);
-		}
-*/
-/*
-		for (int i = asset_player.f_count - 1; i >= 0; i--) {
-			Triangle t = {
-				.v1 = asset_player.v[asset_player.f[i].x-1],
-				.v2 = asset_player.v[asset_player.f[i].y-1],
-				.v3 = asset_player.v[asset_player.f[i].z-1]
-			};
-			t = triangle_offset(t, player.position);
-			triangle_draw(t, buffer, camera, EMERALD);
-		}
-*/
-		/*
-		for (int i = asset_kochmuetze.f_count - 1; i >= 0; i--) {
-			Triangle t = {
-				.v1 = mul_m3f_v3f(mat_rot1, asset_kochmuetze.v[asset_kochmuetze.f[i].x-1]),
-				.v2 = mul_m3f_v3f(mat_rot1, asset_kochmuetze.v[asset_kochmuetze.f[i].y-1]),
-				.v3 = mul_m3f_v3f(mat_rot1, asset_kochmuetze.v[asset_kochmuetze.f[i].z-1])
-			};
-			triangle_draw(t, buffer, camera, EMERALD);
-		}
-		*/
 
-		for (size_t x = 0; x < 4; x++) {
-		for (size_t z = 0; z < 4; z++) {
-			V3f offset = { .x = (float) x * 8.0f, .y = 0.0f, .z = (float) z * 8.0f };
-			if (state.vfc) {
-				V3f max = add_3f(asset_teapot.max, offset);
-				//V3f min = add_3f(asset_teapot.min, offset);
-				V3f dir = sub_3f(max, camera.position);
-				if (dot_3f(dir, camera.forward) <= 0) {
-					models_rejected_count_global += 1;
-					continue;
-				}
-			}
-			for (int i = asset_teapot.f_count - 1; i >= 0; i--) {
-				Triangle t = {
-					.v1 = mul_m3f_v3f(mat_rot1, asset_teapot.v[asset_teapot.f[i].x-1]),
-					.v2 = mul_m3f_v3f(mat_rot1, asset_teapot.v[asset_teapot.f[i].y-1]),
-					.v3 = mul_m3f_v3f(mat_rot1, asset_teapot.v[asset_teapot.f[i].z-1])
-				};
-				t = triangle_offset(t, offset);
+		model_render(models[0], buffer, camera);
+		if (state.hat) {
+			model_render(models[1], buffer, camera);
+		} else {
+			model_render(models[2], buffer, camera);
+		}
 
-				triangle_draw(t, buffer, camera, EMERALD);
-			}
-		}}
 		text_render(string_format(" wireframe        = %s\n", state.wireframe ? "on" : "off"), 0, 20, buffer, GREEN, 2);
 		text_render(string_format(" backface culling = %s\n", state.bfc ? "on" : "off"), 0, 40, buffer, GREEN, 2);
 		text_render(string_format(" frustum culling  = %s\n", state.vfc ? "on" : "off"), 0, 60, buffer, GREEN, 2);
 		buffer_depth_max();
 
-
-		printf("h = %u, w = %u\n", player_texture.height, player_texture.width);
-		for (size_t y = 0; y < player_texture.height; y++) {
-		for (size_t x = 0; x < player_texture.width ; x++) {
-
-			size_t idx = (x + y * player_texture.width) * 4;
-
-			uint32_t current_pixel =
-			    ((uint32_t)player_texture.pixels[idx + 0] << 16) |
-			    ((uint32_t)player_texture.pixels[idx + 1] << 8)  |
-			    ((uint32_t)player_texture.pixels[idx + 2] << 0)  |
-			    ((uint32_t)player_texture.pixels[idx + 3] << 24);
-			pixel_set(x, y, buffer, current_pixel);
-		}}
-
-
 		SDL_UpdateWindowSurface(ctx->window);
 		buffer_flush(buffer, ctx->bytes_per_pixel);
-		//background_render(buffer);
+		background_render(buffer);
 
 		// end time measuring
 		t_ms_avg_rolling += time_measure_end_ms(&t1, &t0, &samples_cur, &t_ms_avg, &t_ms_avg_rolling, buffer);
@@ -692,7 +670,6 @@ void event_loop(SDLContext* ctx, uint32_t* buffer, Camera camera) {
 
 int main(void) {
 
-	(void)player_texture;
 	buffer_depth = calloc((size_t) SCREEN_WIDTH*SCREEN_HEIGHT,
 			      (size_t) sizeof *buffer_depth);
 	for (size_t i = 0; i < SCREEN_WIDTH*SCREEN_HEIGHT; i++) {
@@ -708,7 +685,11 @@ int main(void) {
 	Camera camera;
 	camera_default_set(&camera);
 
-	event_loop(ctx, buffer, camera);
+	Model models[5] = {};
+	models[0] = model_assemble(&asset_player  , &texture_player);
+	models[1] = model_assemble(&asset_zylinder, &texture_zylinder);
+	models[2] = model_assemble(&asset_zaubererhut, &texture_zaubererhut);
+	event_loop(ctx, buffer, camera, models);
 
 	context_sdl_destroy(ctx);
 	free(buffer_depth);
