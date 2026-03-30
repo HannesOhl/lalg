@@ -161,12 +161,13 @@ int main(int argc, char **argv) {
 			strtok(buf, " \n\t");
 			char* tok1 = strtok(NULL, " \n\t");
 			char* tok2 = strtok(NULL, " \n\t");
+			char* tok3 = strtok(NULL, " \n\t");
 
 			if (vn_count_cur < vn_count - 1) {
-				fprintf(out_h, "\t\t{{ %s, %s }},\n", tok1, tok2);
+				fprintf(out_h, "\t\t{{ %s, %s, %s}},\n", tok1, tok2, tok3);
 				vn_count_cur += 1;
 			} else {
-				fprintf(out_h, "\t\t{{ %s, %s }}\n", tok1, tok2);
+				fprintf(out_h, "\t\t{{ %s, %s, %s}}\n", tok1, tok2, tok3);
 				fprintf(out_h, "\t},\n");
 			}
 			free(buf);

@@ -42,5 +42,10 @@ static const uint8_t texture_zaubererhut_blob[] = {
 };
 MAKE_TEXTURE(texture_zaubererhut)
 
+static const uint8_t texture_messa_blob[] = {
+	#embed "../assets/bin/texture_messa.bin"
+};
+MAKE_TEXTURE(texture_messa)
+
 #endif
 

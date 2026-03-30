@@ -99,6 +99,15 @@ static inline float dot_3f(V3f a, V3f b) {
 	return res;
 }
 
+static inline float dot_2f(V2f a, V2f b) {
+
+	float res = 0;
+
+	res = a.x*b.x+a.y*b.y;
+
+	return res;
+}
+
 static inline M3f rot_xy_3f(float angle) {
 
 	M3f res = {0};
@@ -172,6 +181,19 @@ static inline V3f norm_3f(V3f a) {
 		res.x = a.x / len;
 		res.y = a.y / len;
 		res.z = a.z / len;
+	}
+
+	return res;
+}
+
+static inline V2f norm_2f(V2f a) {
+
+	V2f res = {0};
+
+	float len = sqrtf(a.x*a.x + a.y*a.y);
+	if (len > 1e-8) {
+		res.x = a.x / len;
+		res.y = a.y / len;
 	}
 
 	return res;
