@@ -1,7 +1,7 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
-#include "../tools/lalg.h"
+#include "../tools/lalg/lalg.h"
 
 typedef struct {
         V3f position;
