@@ -158,19 +158,11 @@ static inline V3f norm_3f(V3f a) {
 	)((a))
 
 // vectors: scale
-static inline V3u scale_3u(float fac, V3u a) {
-	return (V3u) {{ fac * a.x, fac * a.y, fac * a.z }};
-}
-static inline V3s scale_3s(float fac, V3s a) {
-	return (V3s) {{ fac * a.x, fac * a.y, fac * a.z }};
-}
 static inline V3f scale_3f(float fac, V3f a) {
 	return (V3f) {{ fac * a.x, fac * a.y, fac * a.z }};
 }
 #define scale(a, b)		\
 	_Generic((b), 		\
-		V3u: scale_3u, 	\
-		V3s: scale_3s, 	\
 		V3f: scale_3f	\
 	)((a), (b))
 
