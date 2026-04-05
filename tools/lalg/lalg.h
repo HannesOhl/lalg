@@ -55,41 +55,105 @@ typedef union {
 	float arr[3];
 } V3f;
 
-// vectors: addition (we exclude matrix-matrix addition)
-static inline V3u add_3u(V3u a, V3u b) {
+// matrices: types
+typedef union {
+	struct {
+		int32_t e00, e01, e02;
+		int32_t e10, e11, e12;
+		int32_t e20, e21, e22;
+	};
+	uint32_t arr[9];
+} M3s;
+
+typedef union {
+	struct {
+		uint32_t e00, e01, e02;
+		uint32_t e10, e11, e12;
+		uint32_t e20, e21, e22;
+	};
+	uint32_t arr[9];
+} M3u;
+
+typedef union {
+	struct {
+		float e00, e01, e02;
+		float e10, e11, e12;
+		float e20, e21, e22;
+	};
+	float arr[9];
+} M3f;
+
+// addition
+static inline V3u add_v_3u(V3u a, V3u b) {
 	return (V3u) {{ a.x + b.x, a.y + b.y, a.z + b.z }};
 }
-static inline V3s add_3s(V3s a, V3s b) {
+static inline V3s add_v_3s(V3s a, V3s b) {
 	return (V3s) {{ a.x + b.x, a.y + b.y, a.z + b.z }};
 }
-static inline V3f add_3f(V3f a, V3f b) {
+static inline V3f add_v_3f(V3f a, V3f b) {
 	return (V3f) {{ a.x + b.x, a.y + b.y, a.z + b.z }};
+}
+static inline M3u add_m_3u(M3u m, M3u n) {
+	return (M3u) {{ m.e00+n.e00, m.e01+n.e01, m.e02+n.e02,
+			m.e10+n.e10, m.e11+n.e11, m.e12+n.e12,
+			m.e20+n.e20, m.e21+n.e21, m.e22+n.e22 }};
+}
+static inline M3s add_m_3s(M3s m, M3s n) {
+	return (M3s) {{ m.e00+n.e00, m.e01+n.e01, m.e02+n.e02,
+			m.e10+n.e10, m.e11+n.e11, m.e12+n.e12,
+			m.e20+n.e20, m.e21+n.e21, m.e22+n.e22 }};
+}
+static inline M3f add_m_3f(M3f m, M3f n) {
+	return (M3f) {{ m.e00+n.e00, m.e01+n.e01, m.e02+n.e02,
+			m.e10+n.e10, m.e11+n.e11, m.e12+n.e12,
+			m.e20+n.e20, m.e21+n.e21, m.e22+n.e22 }};
 }
 #define add(a, b)		\
 	_Generic((a), 		\
-		V3u: add_3u, 	\
-		V3s: add_3s, 	\
-		V3f: add_3f	\
+		V3u: add_v_3u, 	\
+		V3s: add_v_3s, 	\
+		V3f: add_v_3f,	\
+		M3u: add_m_3u,	\
+		M3s: add_m_3s,	\
+		M3f: add_m_3f	\
 	)((a), (b))
 
-// vectors: subtraction (we exclude matrix-matrix subtraction)
-static inline V3u sub_3u(V3u a, V3u b) {
+// subtraction
+static inline V3u sub_v_3u(V3u a, V3u b) {
 	return (V3u) {{ a.x - b.x, a.y - b.y, a.z - b.z }};
 }
-static inline V3s sub_3s(V3s a, V3s b) {
+static inline V3s sub_v_3s(V3s a, V3s b) {
 	return (V3s) {{ a.x - b.x, a.y - b.y, a.z - b.z }};
 }
-static inline V3f sub_3f(V3f a, V3f b) {
+static inline V3f sub_v_3f(V3f a, V3f b) {
 	return (V3f) {{ a.x - b.x, a.y - b.y, a.z - b.z }};
+}
+static inline M3u sub_m_3u(M3u m, M3u n) {
+	return (M3u) {{ m.e00-n.e00, m.e01-n.e01, m.e02-n.e02,
+			m.e10-n.e10, m.e11-n.e11, m.e12-n.e12,
+			m.e20-n.e20, m.e21-n.e21, m.e22-n.e22 }};
+}
+static inline M3s sub_m_3s(M3s m, M3s n) {
+	return (M3s) {{ m.e00-n.e00, m.e01-n.e01, m.e02-n.e02,
+			m.e10-n.e10, m.e11-n.e11, m.e12-n.e12,
+			m.e20-n.e20, m.e21-n.e21, m.e22-n.e22 }};
+}
+static inline M3f sub_m_3f(M3f m, M3f n) {
+	return (M3f) {{ m.e00-n.e00, m.e01-n.e01, m.e02-n.e02,
+			m.e10-n.e10, m.e11-n.e11, m.e12-n.e12,
+			m.e20-n.e20, m.e21-n.e21, m.e22-n.e22 }};
 }
 #define sub(a, b)		\
 	_Generic((a), 		\
-		V3u: sub_3u, 	\
-		V3s: sub_3s, 	\
-		V3f: sub_3f	\
+		V3u: sub_v_3u, 	\
+		V3s: sub_v_3s, 	\
+		V3f: sub_v_3f,	\
+		M3u: sub_m_3u,	\
+		M3s: sub_m_3s,	\
+		M3f: sub_m_3f	\
 	)((a), (b))
 
-// vectors: dot product
+// dot product
 static inline uint32_t dot_2u(V2u a, V2u b) {
 	return ( a.x * b.x + a.y * b.y );
 }
@@ -158,50 +222,35 @@ static inline V3f norm_3f(V3f a) {
 	)((a))
 
 // vectors: scale
-static inline V3f scale_3f(float fac, V3f a) {
+static inline V3f scale_v_3f(float fac, V3f a) {
 	return (V3f) {{ fac * a.x, fac * a.y, fac * a.z }};
 }
-#define scale(a, b)		\
-	_Generic((b), 		\
-		V3f: scale_3f	\
-	)((a), (b))
-
-// vectors: intersection of line segment
-static inline V3f intersect_z(V3f a, V3f b, float z) {
-	float dz = b.z - a.z;
-	if (dz*dz < 1e-8f) return a;
-	float lambda = (z - a.z) / dz;
-	return (V3f) {{ a.x + lambda * (b.x - a.x), a.y + lambda * (b.y - a.y), z }};
+static inline M3f scale_m_3f(float fac, M3f m) {
+	return (M3f) {{ fac*m.e00, fac*m.e01, fac*m.e02,
+			fac*m.e11, fac*m.e12, fac*m.e12,
+			fac*m.e21, fac*m.e22, fac*m.e22 }};
 }
-
-// matrices: types
-typedef union {
-	struct {
-		uint32_t m00, m01, m02;
-		uint32_t m10, m11, m12;
-		uint32_t m20, m21, m22;
-	};
-	uint32_t arr[9];
-} M3u;
-typedef union {
-	struct {
-		float m00, m01, m02;
-		float m10, m11, m12;
-		float m20, m21, m22;
-	};
-	float arr[9];
-} M3f;
+#define scale(a, b)		 \
+	_Generic((b), 		 \
+		V3f: scale_v_3f, \
+		M3f: scale_m_3f	 \
+	)((a), (b))
 
 // matrices: multplication matrix-vector and matrix-matrix
 static inline V3u mul_m3u_v3u(M3u m, V3u a) {
-	return (V3u) {{ m.arr[0]*a.arr[0] + m.arr[3]*a.arr[1] + m.arr[6]*a.arr[2],
-			m.arr[1]*a.arr[0] + m.arr[4]*a.arr[1] + m.arr[7]*a.arr[2],
-			m.arr[2]*a.arr[0] + m.arr[5]*a.arr[1] + m.arr[8]*a.arr[2] }};
+	return (V3u) {{ m.e00*a.x + m.e10*a.y + m.e20*a.z,
+			m.e01*a.x + m.e11*a.y + m.e21*a.z,
+			m.e02*a.x + m.e12*a.y + m.e22*a.z }};
+}
+static inline V3s mul_m3s_v3s(M3s m, V3s a) {
+	return (V3s) {{ m.e00*a.x + m.e10*a.y + m.e20*a.z,
+			m.e01*a.x + m.e11*a.y + m.e21*a.z,
+			m.e02*a.x + m.e12*a.y + m.e22*a.z }};
 }
 static inline V3f mul_m3f_v3f(M3f m, V3f a) {
-	return (V3f) {{ m.arr[0]*a.arr[0] + m.arr[3]*a.arr[1] + m.arr[6]*a.arr[2],
-			m.arr[1]*a.arr[0] + m.arr[4]*a.arr[1] + m.arr[7]*a.arr[2],
-			m.arr[2]*a.arr[0] + m.arr[5]*a.arr[1] + m.arr[8]*a.arr[2] }};
+	return (V3f) {{ m.e00*a.x + m.e10*a.y + m.e20*a.z,
+			m.e01*a.x + m.e11*a.y + m.e21*a.z,
+			m.e02*a.x + m.e12*a.y + m.e22*a.z }};
 }
 static inline M3u mul_m3u_m3u(M3u m, M3u n) {
 	M3u res = {0};
@@ -229,24 +278,29 @@ static inline M3f mul_m3f_m3f(M3f m, M3f n) {
 			V3u: mul_m3u_v3u,	\
 			M3u: mul_m3u_m3u	\
 		),				\
+		M3s: _Generic((b), 		\
+			V3s: mul_m3s_v3s,	\
+			M3s: mul_m3s_m3s	\
+		),				\
 		M3f: _Generic((b), 		\
 			V3f: mul_m3f_v3f,	\
 			M3f: mul_m3f_m3f	\
 		)				\
 	)((a), (b));
 
-static inline V3f rot_rod_3f(V3f vector, V3f axis, float angle) {
-
+static inline V3f rot_ax_3f(V3f vector, V3f axis, float angle) {
 	V3f res = {0};
-
 	float cosine = cosf(angle);
 	float sine   = sinf(angle);
-
 	res = add( add(scale(cosine, vector), scale(sine, cross(axis, vector))),
 		   scale((1.0f-cosine) * dot(axis, vector), axis) );
 
 	return res;
 }
+#define rot_ax(a, b, c)	       \
+	_Generic((a), 	       \
+		V3f: rot_ax_3f \
+	)((a), (b), (c))
 
 // other types
 typedef struct {
@@ -256,6 +310,14 @@ typedef struct {
 } Triangle;
 
 // other utilities
+
+static inline V3f intersect_z(V3f a, V3f b, float z) {
+	float dz = b.z - a.z;
+	if (dz*dz < 1e-8f) return a;
+	float lambda = (z - a.z) / dz;
+	return (V3f) {{ a.x + lambda * (b.x - a.x), a.y + lambda * (b.y - a.y), z }};
+}
+
 static inline float maxf(float value, float max) {
 
 	return value < max ? max : value;

@@ -23,12 +23,12 @@ void camera_update_mouse(Camera* camera, V2f rel) {
 	V3f v_y = (V3f) {{ 0.0f, 1.0f, 0.0f}};
 	// x-direction
 	float angle_x   = -scale * rel.x;
-	camera->forward = norm_3f( rot_rod_3f(camera->forward, v_y , angle_x) );
+	camera->forward = norm_3f( rot_ax(camera->forward, v_y , angle_x) );
 
 	// y-direction
 	float angle_y     = -scale * rel.y;
 	V3f right         = norm_3f( cross_3f(camera->forward, v_y) );
-	camera->forward   = norm_3f( rot_rod_3f(camera->forward, right, angle_y) );
+	camera->forward   = norm_3f( rot_ax(camera->forward, right, angle_y) );
 	camera->forward.y = maxf(camera->forward.y, -0.9);
 	camera->up        = norm_3f( cross_3f(right, camera->forward) );
 }

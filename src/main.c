@@ -519,9 +519,9 @@ void model_render_advanced(Model* model, uint32_t* buffer, Camera camera,
 
 	for (size_t i = 0; i < model->mesh->f_count; i++) {
 		Triangle t = {
-			.v1 = add(rot_rod_3f(rot_rod_3f(model->mesh->v[model->mesh->f[i].c1.v-1], ax1, r), ax2, r2), offset),
-			.v2 = add(rot_rod_3f(rot_rod_3f(model->mesh->v[model->mesh->f[i].c2.v-1], ax1, r), ax2, r2), offset),
-			.v3 = add(rot_rod_3f(rot_rod_3f(model->mesh->v[model->mesh->f[i].c3.v-1], ax1, r), ax2, r2), offset)
+			.v1 = add(rot_ax(rot_ax(model->mesh->v[model->mesh->f[i].c1.v-1], ax1, r), ax2, r2), offset),
+			.v2 = add(rot_ax(rot_ax(model->mesh->v[model->mesh->f[i].c2.v-1], ax1, r), ax2, r2), offset),
+			.v3 = add(rot_ax(rot_ax(model->mesh->v[model->mesh->f[i].c3.v-1], ax1, r), ax2, r2), offset)
 		};
 
 		V2f vt1 = model->mesh->vt[model->mesh->f[i].c1.vt-1];
@@ -713,18 +713,17 @@ void event_loop(SDLContext* ctx, uint32_t* buffer, Camera camera, Model* model) 
 			V2f n = { .x = projectile.right.x, .y = projectile.right.z };
 			n = norm(n);
 			float rot = atan2f(n.x, n.y);
-			rot = 0;
-			rot2 = 0;
+			//rot = 0;
+			//rot2 = 0;
 
 			model_render_advanced(&model[3], buffer, camera,
 					projectile.pos, projectile.up, rot, projectile.right, rot2);
-			projectile.pos = add(projectile.pos, scale(0.0f, projectile.vel));
+			projectile.pos = add(projectile.pos, scale(0.1f, projectile.vel));
 		}
 
-
-
-		model_render_advanced(&model[0], buffer, camera,
+		model_render_advanced(&model[4], buffer, camera,
 					player.position, projectile.up, 0, projectile.right, 0);
+
 		/*
 		if (state.hat) {
 			model_render(model[1], buffer, camera);
@@ -787,12 +786,13 @@ int main(void) {
 	camera_default_set(&camera);
 
 	// prepare models
-	size_t model_number = 4;
+	size_t model_number = 5;
 	Model model[model_number] = {};
 	model[0] = model_assemble(&asset_player  , &texture_player);
 	model[1] = model_assemble(&asset_zylinder, &texture_zylinder);
 	model[2] = model_assemble(&asset_zaubererhut, &texture_zaubererhut);
 	model[3] = model_assemble(&asset_messa, &texture_messa);
+	model[4] = model_assemble(&asset_lok, &texture_lok);
 
 	// event loop
 	event_loop(ctx, buffer, camera, model);
@@ -802,6 +802,7 @@ int main(void) {
 	free(model[1].mesh);
 	free(model[2].mesh);
 	free(model[3].mesh);
+	free(model[4].mesh);
 	free(buffer_depth);
 	context_sdl_destroy(ctx);
 	SDL_Quit();
