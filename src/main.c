@@ -18,7 +18,7 @@
 #include "../assets/inc/asset_zylinder.h"
 #include "../assets/inc/asset_zaubererhut.h"
 #include "../assets/inc/asset_lok.h"
-#include "../assets/inc/asset_messa.h"
+#include "../assets/inc/mesh_messa.h"
 #include "../assets/inc/asset_kochmuetze.h"
 
 #define XMIN 40
@@ -44,7 +44,6 @@ typedef struct {
 	const V2f* vt;
 	const V3f* vn;
 	const Face* f;
-	BoundingBox bb;
 } Mesh;
 
 typedef struct {
@@ -791,7 +790,7 @@ int main(void) {
 	model[0] = model_assemble(&asset_player  , &texture_player);
 	model[1] = model_assemble(&asset_zylinder, &texture_zylinder);
 	model[2] = model_assemble(&asset_zaubererhut, &texture_zaubererhut);
-	model[3] = model_assemble(&asset_messa, &texture_messa);
+	model[3] = model_assemble(&mesh_messa, &texture_messa);
 	model[4] = model_assemble(&asset_lok, &texture_lok);
 
 	// event loop
