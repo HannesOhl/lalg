@@ -17,7 +17,7 @@
 #include "../assets/inc/asset_player.h"
 #include "../assets/inc/asset_zylinder.h"
 #include "../assets/inc/asset_zaubererhut.h"
-#include "../assets/inc/asset_lok.h"
+#include "../assets/inc/mesh_lok.h"
 #include "../assets/inc/mesh_messa.h"
 #include "../assets/inc/asset_kochmuetze.h"
 
@@ -791,7 +791,7 @@ int main(void) {
 	model[1] = model_assemble(&asset_zylinder, &texture_zylinder);
 	model[2] = model_assemble(&asset_zaubererhut, &texture_zaubererhut);
 	model[3] = model_assemble(&mesh_messa, &texture_messa);
-	model[4] = model_assemble(&asset_lok, &texture_lok);
+	model[4] = model_assemble(&mesh_lok, &texture_lok);
 
 	// event loop
 	event_loop(ctx, buffer, camera, model);
