@@ -414,12 +414,13 @@ void triangle_draw(Triangle t, V2f uv1, V2f uv2, V2f uv3, uint32_t* buffer, Came
 	if (fabsf(denom) < EPS) return;
 
 	// get shaded color for triangle based on global light pos
+	/*
 	V3f light_global_pos_w = { .x = 5.0f, .y = 5.0f, .z = 5.0f };
 	V3f light_global_pos_v = world_to_view(light_global_pos_w, camera);
 	V3f dir = norm(sub(t.v1, light_global_pos_v));
 	float intensity = dot(dir, n);
 	color = shade_color(color, intensity);
-
+	*/
 	float denom_inv = 1.0f / denom;
 	const float BC_EPS = 1e-6f;
 
