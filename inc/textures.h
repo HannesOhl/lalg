@@ -23,27 +23,27 @@ typedef struct {
 	};
 
 static const uint8_t texture_player_blob[] = {
-	#embed "../assets/bin/texture_player.bin"
+	#embed "./textures/texture_player.bin"
 };
 MAKE_TEXTURE(texture_player)
 
 static const uint8_t texture_lok_blob[] = {
-	#embed "../assets/bin/texture_lok.bin"
+	#embed "./textures/texture_lok.bin"
 };
 MAKE_TEXTURE(texture_lok)
 
 static const uint8_t texture_zylinder_blob[] = {
-	#embed "../assets/bin/texture_zylinder.bin"
+	#embed "./textures/texture_zylinder.bin"
 };
 MAKE_TEXTURE(texture_zylinder)
 
 static const uint8_t texture_zaubererhut_blob[] = {
-	#embed "../assets/bin/texture_zaubererhut.bin"
+	#embed "./textures/texture_zaubererhut.bin"
 };
 MAKE_TEXTURE(texture_zaubererhut)
 
 static const uint8_t texture_messa_blob[] = {
-	#embed "../assets/bin/texture_messa.bin"
+	#embed "./textures/texture_messa.bin"
 };
 MAKE_TEXTURE(texture_messa)
 

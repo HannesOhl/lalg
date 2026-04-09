@@ -17,8 +17,8 @@
 //#include "../assets/inc/asset_player.h"
 //#include "../assets/inc/asset_zylinder.h"
 //#include "../assets/inc/asset_zaubererhut.h"
-#include "../assets/inc/mesh_lok.h"
-#include "../assets/inc/mesh_messa.h"
+#include "../inc/meshes/mesh_lok.h"
+#include "../inc/meshes/mesh_messa.h"
 //#include "../assets/inc/asset_kochmuetze.h"
 
 #define XMIN 40
@@ -67,9 +67,9 @@ typedef struct {
 Model model_assemble(const void* asset, const Texture* asset_texture) {
 
 	const uint8_t* a = (const uint8_t*) asset;
-
 	Mesh* mesh = calloc((size_t) 1, sizeof *mesh);
 
+	// copy counts to model and set pointers to correct mesh data
 	size_t offset = 0;
 	memcpy(&mesh->v_count, a + offset, sizeof mesh->v_count);
 	offset += sizeof mesh->v_count;
@@ -94,6 +94,7 @@ Model model_assemble(const void* asset, const Texture* asset_texture) {
 		.tex = asset_texture
 	};
 
+	// calculate initial bounding box
 	float x_min = +FLT_MAX; float y_min = +FLT_MAX; float z_min = +FLT_MAX;
 	float x_max = -FLT_MAX; float y_max = -FLT_MAX; float z_max = -FLT_MAX;
 	for (size_t i = 0; i < res.mesh->v_count; i++) {
