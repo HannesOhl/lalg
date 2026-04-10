@@ -377,10 +377,33 @@ static bool LALG_test_add() {
 	return true;
 }
 
+static bool LALG_test_sub() {
+
+	fprintf(stdout, "\tsub:\n");
+
+	V3u res_u = sub(TEST_u1, TEST_u2);
+	assert(res_u.x == 0u && res_u.y == 0u && res_u.z == 0u);
+	fprintf(stdout, "\t\tV3u passed!\n");
+
+	V3s res_s = sub(TEST_s1, TEST_s2);
+	assert(res_s.x == 0 && res_s.y == 0 && res_s.z == 0);
+	fprintf(stdout, "\t\tV3s passed!\n");
+
+	float EPS = 1e-6f;
+	V3f res_f = sub(TEST_f1, TEST_f2);
+	assert( fabsf(res_f.x-(-0.3f)) < EPS &&
+		fabsf(res_f.y-(-0.3f)) < EPS &&
+		fabsf(res_f.z-(-0.3f)) < EPS);
+	fprintf(stdout, "\t\tV3f passed!\n");
+
+	return true;
+}
+
 static bool LALG_tests_run() {
 
 	fprintf(stdout, "running all lalg.h unit tests:\n");
 	LALG_test_add();
+	LALG_test_sub();
 	return true;
 }
 
