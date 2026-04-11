@@ -288,6 +288,28 @@ static inline M3f mul_m3f_m3f(M3f m, M3f n) {
 		)				\
 	)((a), (b));
 
+static inline M3u transpose_3u(M3u m) {
+	return (M3u) {{ m.e00, m.e10, m.e20,
+			m.e01, m.e11, m.e21,
+			m.e02, m.e12, m.e22 }};
+}
+static inline M3s transpose_3s(M3s m) {
+	return (M3s) {{ m.e00, m.e10, m.e20,
+			m.e01, m.e11, m.e21,
+			m.e02, m.e12, m.e22 }};
+}
+static inline M3f transpose_3f(M3f m) {
+	return (M3f) {{ m.e00, m.e10, m.e20,
+			m.e01, m.e11, m.e21,
+			m.e02, m.e12, m.e22 }};
+}
+#define transpose(a)  			\
+	_Generic((a), 			\
+		M3u: transpose_3u, 	\
+		M3s: transpose_3s, 	\
+		M3f: transpose_3f, 	\
+	)
+
 static inline V3f rot_ax_3f(V3f vector, V3f axis, float angle) {
 	V3f res = {0};
 	float cosine = cosf(angle);
