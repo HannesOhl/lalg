@@ -1,4 +1,3 @@
-// added test comment
 // TODO: 1) finish unit tests
 
 #ifndef LALG_H
